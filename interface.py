@@ -3,12 +3,13 @@ from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPu
                            QLineEdit, QListWidgetItem, QTableWidget, QTableWidgetItem, QHeaderView,
                            QMessageBox,QAbstractItemView, QProgressBar)
 from PyQt5.QtCore import Qt
+from decoder import Decoder
 from reader import reader
 import os
 import shutil
 from dataset_creator import create_dataset
-from decoder import Decoder  # Import the Decoder class
 from PyQt5.QtGui import QIntValidator
+import re
 
 
 class AddDialog(QDialog):
@@ -224,14 +225,14 @@ class Interface(QMainWindow):
         
         # Liste widget'ı yerine tablo widget'ı oluştur
         self.dataset_table = QTableWidget()
-        self.dataset_table.setColumnCount(2)
-        self.dataset_table.setHorizontalHeaderLabels(["Kategori", "Dosyalar"])
+        self.dataset_table.setColumnCount(3)  # Kolon sayısını 3'e düşür
+        self.dataset_table.setHorizontalHeaderLabels(["Kategori", "Dosyalar", "Toplam"])  # Açıklama kolonunu kaldır
         
         # Tabloyu düzenlenemez yap
         self.dataset_table.setEditTriggers(QTableWidget.NoEditTriggers)
         
         # Tablo stilini ayarla
-        self.dataset_table.setStyleSheet("""
+        self.dataset_table.setStyleSheet(""" 
             QTableWidget {
                 border: 1px solid #ccc;
                 gridline-color: #ccc;
@@ -247,6 +248,7 @@ class Interface(QMainWindow):
         header = self.dataset_table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
         header.setSectionResizeMode(1, QHeaderView.Stretch)
+        header.setSectionResizeMode(2, QHeaderView.ResizeToContents)  # Toplam kolonu için genişlik ayarı
         
         layout.addWidget(self.dataset_table)
         
@@ -447,6 +449,10 @@ class Interface(QMainWindow):
                 # Seçilen dosyaları ekle
                 files_text = ", ".join([os.path.basename(f) for f in selected_files])
                 self.dataset_table.setItem(row, 1, QTableWidgetItem(files_text))
+                
+                # Toplamı hesapla ve yeni kolona ekle
+                total_count = sum(int(num) for num in re.findall(r'\((\d+)\)', files_text))
+                self.dataset_table.setItem(row, 2, QTableWidgetItem(str(total_count)))  # Toplam kolona ekle
                 
                 # Create Dataset butonunu kontrol et
                 self.check_create_button()

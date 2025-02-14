@@ -42,28 +42,77 @@ def create_dataset(selected_folders_list, category_names, train_ratio, val_ratio
     try:
         # Ana klasörü oluştur
         output_dataset = "output_dataset"
-        temp = "temp"
+        
         os.makedirs(output_dataset, exist_ok=True)
         
         # Train, val, test klasörlerini ve alt klasörlerini oluştur
-        for split in ['train', 'val', 'test']:
+        for split in ['train', 'valid', 'test']:
             split_path = os.path.join(output_dataset, split)
             os.makedirs(os.path.join(split_path, 'images'), exist_ok=True)
             os.makedirs(os.path.join(split_path, 'labels'), exist_ok=True)
         
+       
         # Tüm seçili klasörleri işle
         for index, folders in enumerate(selected_folders_list):
+            print(folders)
             for folder in folders:
-                source_folder = os.path.join("output", folder)
+                source_folder = os.path.join("output", folder.split(" ")[0])
+                source_images = os.path.join(source_folder, "images")
+               
+
+                source_labels = os.path.join(source_folder, "labels")
+                total_files_in_folder = len(os.listdir(source_images))
+                print(source_images)
+
                 
+                for i ,img in enumerate(os.listdir(source_images)):
+                        
+                        
+                        
+                        if i<=total_files_in_folder*train_ratio:
+                            dst_path = "output_dataset/train"
+                        elif i<= total_files_in_folder*(train_ratio+test_ratio):
+                            dst_path = "output_dataset/test"
+                        else :
+                            dst_path = "output_dataset/valid"
+
+                        src_img_path = os.path.join(source_images, img)
+                        dst_img_path = os.path.join(dst_path , 'images', img)
+
+                       
+
+                        if os.path.isfile(src_img_path):
+                            try:
+                                shutil.copy2(src_img_path, dst_img_path)
+                            except Exception as e:
+                                print(f"Resim kopyalanamadı: {str(e)}")
+
+                            
+                        
+                        src_lbl_path = os.path.join(source_labels, img.replace("jpg","txt"))
+                        dst_lbl_path = os.path.join(dst_path , 'labels', img.replace("jpg","txt"))
+                        
+                        try:    
+                                label_path = shutil.copy2(src_lbl_path, dst_lbl_path)
+                                update_line_in_file_w(label_path, str(index), len(category_names))
+                        except Exception as e:
+                                print(f"Etiket kopyalanamadı: {str(e)}")
+                        
+                """
                 # Images klasörünü train klasörüne kopyala
                 source_images = os.path.join(source_folder, "images")
+                print(os.path.exists(source_images))
                 if os.path.exists(source_images):
                     for img in os.listdir(source_images):
                         src_path = os.path.join(source_images, img)
                         dst_path = os.path.join(temp , 'images', img)
                         if os.path.isfile(src_path):
-                            shutil.copy2(src_path, dst_path)
+                            try:
+                                shutil.copy2(src_path, dst_path)
+                            except Exception as e:
+                                print(f"Resim kopyalanamadı: {str(e)}")
+
+
                 
                 # Labels klasörünü train klasörüne kopyala
                 source_labels = os.path.join(source_folder, "labels")
@@ -72,10 +121,13 @@ def create_dataset(selected_folders_list, category_names, train_ratio, val_ratio
                         src_path = os.path.join(source_labels, lbl)
                         dst_path = os.path.join(temp,  'labels', lbl)
                         if os.path.isfile(src_path):
-                            label_path = shutil.copy2(src_path, dst_path)
-                            update_line_in_file_w(label_path, str(index), len(category_names))
+                            try:
+                                label_path = shutil.copy2(src_path, dst_path)
+                                update_line_in_file_w(label_path, str(index), len(category_names))
+                            except Exception as e:
+                                print(f"Etiket kopyalanamadı: {str(e)}")
         
-        
+                   
 
         # Seçilen görselleri ve etiketlerini output dataset train klasörüne taşı
         folders = ["train","val","test"]
@@ -83,9 +135,8 @@ def create_dataset(selected_folders_list, category_names, train_ratio, val_ratio
         images =[]
         total_images = len(os.listdir(os.path.join(temp, 'images')))
         for index,folder in enumerate(folders):
+
             # Train oranına göre kaç görsel ve label taşınacağını hesapla
-            
-    
             num_images = int(total_images * ratios[index])
 
             # Rastgele görselleri seç
@@ -104,7 +155,7 @@ def create_dataset(selected_folders_list, category_names, train_ratio, val_ratio
         
 
         
-        
+        """
         # YOLO v11 data.yaml dosyasını oluştur
         yaml_content = (
             f"train: ../train/images\n"
@@ -119,7 +170,7 @@ def create_dataset(selected_folders_list, category_names, train_ratio, val_ratio
         yaml_path = os.path.join(output_dataset, "data.yaml")
         with open(yaml_path, 'w') as f:
             f.write(yaml_content)
-        
+        print(total_files_in_folder,train_ratio,test_ratio)
         return True
         
     except Exception as e:
