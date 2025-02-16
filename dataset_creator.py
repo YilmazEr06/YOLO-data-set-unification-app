@@ -42,7 +42,6 @@ def create_dataset(selected_folders_list, category_names, train_ratio, val_ratio
     try:
         # Ana klasörü oluştur
         output_dataset = "output_dataset"
-        
         os.makedirs(output_dataset, exist_ok=True)
         
         # Train, val, test klasörlerini ve alt klasörlerini oluştur
@@ -51,111 +50,74 @@ def create_dataset(selected_folders_list, category_names, train_ratio, val_ratio
             os.makedirs(os.path.join(split_path, 'images'), exist_ok=True)
             os.makedirs(os.path.join(split_path, 'labels'), exist_ok=True)
         
-       
         # Tüm seçili klasörleri işle
         for index, folders in enumerate(selected_folders_list):
-            print(folders)
             for folder in folders:
                 source_folder = os.path.join("output", folder.split(" ")[0])
                 source_images = os.path.join(source_folder, "images")
-               
-
                 source_labels = os.path.join(source_folder, "labels")
-                total_files_in_folder = len(os.listdir(source_images))
-                print(source_images)
 
-                
-                for i ,img in enumerate(os.listdir(source_images)):
-                        
-                        
-                        
-                        if i<=total_files_in_folder*train_ratio:
-                            dst_path = "output_dataset/train"
-                        elif i<= total_files_in_folder*(train_ratio+test_ratio):
-                            dst_path = "output_dataset/test"
-                        else :
-                            dst_path = "output_dataset/valid"
+                if not os.path.exists(source_images) or not os.path.exists(source_labels):
+                    print(f"Kaynak klasörler bulunamadı: {source_folder}")
+                    continue
 
-                        src_img_path = os.path.join(source_images, img)
-                        dst_img_path = os.path.join(dst_path , 'images', img)
+                total_files_in_folder = len(os.listdir(source_images))  # Klasördeki toplam dosya sayısını al
 
-                       
+                for i, img in enumerate(os.listdir(source_images)):
+                    src_img_path = os.path.join(source_images, img)
+                    src_lbl_path = os.path.join(source_labels, img.replace("jpg", "txt"))
 
-                        if os.path.isfile(src_img_path):
-                            try:
-                                shutil.copy2(src_img_path, dst_img_path)
-                            except Exception as e:
-                                print(f"Resim kopyalanamadı: {str(e)}")
+                    if not os.path.isfile(src_img_path) or not os.path.isfile(src_lbl_path):
+                        print(f"Dosya bulunamadı: {src_img_path} veya {src_lbl_path}")
+                        continue
 
-                            
-                        
-                        src_lbl_path = os.path.join(source_labels, img.replace("jpg","txt"))
-                        dst_lbl_path = os.path.join(dst_path , 'labels', img.replace("jpg","txt"))
-                        
-                        try:    
-                                label_path = shutil.copy2(src_lbl_path, dst_lbl_path)
-                                update_line_in_file_w(label_path, str(index), len(category_names))
-                        except Exception as e:
-                                print(f"Etiket kopyalanamadı: {str(e)}")
-                        
-                """
-                # Images klasörünü train klasörüne kopyala
-                source_images = os.path.join(source_folder, "images")
-                print(os.path.exists(source_images))
-                if os.path.exists(source_images):
-                    for img in os.listdir(source_images):
-                        src_path = os.path.join(source_images, img)
-                        dst_path = os.path.join(temp , 'images', img)
-                        if os.path.isfile(src_path):
-                            try:
-                                shutil.copy2(src_path, dst_path)
-                            except Exception as e:
-                                print(f"Resim kopyalanamadı: {str(e)}")
+                    # Orana göre hedef klasörü belirle
+                    if i < total_files_in_folder * train_ratio:
+                        dst_path = os.path.join(output_dataset, 'train')
+
+                    elif i < total_files_in_folder * (train_ratio + test_ratio):
+                        dst_path = os.path.join(output_dataset, 'test')
+                    else:
+                        dst_path = os.path.join(output_dataset, 'valid')
+                    # İlk basamağın 0 olmaması için 1-9 arasında rastgele bir sayı seçilir
+                    first_digit = random.randint(1, 9)
+                    # Kalan basamaklar 0-9 arasında rastgele seçilir
+                    remaining_digits = [random.randint(0, 9) for _ in range(30 - 1)]
+                    # Tüm basamakları birleştir
+                    random_number = str(first_digit) + ''.join(map(str, remaining_digits))
+                    # Resmi kopyala
+                    dst_img_path = os.path.join(dst_path, 'images', img)
+                    shutil.copy2(src_img_path, dst_img_path)
+
+                    print(dst_img_path)
+                    
+                    name = dst_img_path.split("\\")[:3]
+                    name = "/".join(name)
+                    new_name_path =f"{name}\\images_{random_number}.jpg" 
+                    print(name)
+                    print(new_name_path)
+                    os.rename(dst_img_path,new_name_path)
+                    
+                    
+
+                    # Etiketi kopyala ve güncelle
+                    dst_lbl_path = os.path.join(dst_path, 'labels', img.replace("jpg", "txt"))
+                    label_path = shutil.copy2(src_lbl_path, dst_lbl_path)
+                    update_line_in_file_w(label_path, str(index), len(category_names))
 
 
-                
-                # Labels klasörünü train klasörüne kopyala
-                source_labels = os.path.join(source_folder, "labels")
-                if os.path.exists(source_labels):
-                    for lbl in os.listdir(source_labels):
-                        src_path = os.path.join(source_labels, lbl)
-                        dst_path = os.path.join(temp,  'labels', lbl)
-                        if os.path.isfile(src_path):
-                            try:
-                                label_path = shutil.copy2(src_path, dst_path)
-                                update_line_in_file_w(label_path, str(index), len(category_names))
-                            except Exception as e:
-                                print(f"Etiket kopyalanamadı: {str(e)}")
-        
+
+                    name = dst_lbl_path.split("\\")[:3]
+                    name = "/".join(name)
+                    new_name_path =f"{name}\\images_{random_number}.txt" 
+                    print(name)
+                    print(new_name_path)
+                    os.rename(dst_lbl_path,new_name_path)
+
                    
+                    
 
-        # Seçilen görselleri ve etiketlerini output dataset train klasörüne taşı
-        folders = ["train","val","test"]
-        ratios = [train_ratio,val_ratio,test_ratio]
-        images =[]
-        total_images = len(os.listdir(os.path.join(temp, 'images')))
-        for index,folder in enumerate(folders):
 
-            # Train oranına göre kaç görsel ve label taşınacağını hesapla
-            num_images = int(total_images * ratios[index])
-
-            # Rastgele görselleri seç
-            all_images = os.listdir(os.path.join(temp, 'images'))
-            selected_images = random.sample(all_images, num_images)
-            for img in selected_images:
-                img_src_path = os.path.join(temp, 'images', img)
-                img_dst_path = os.path.join(output_dataset, folder, 'images', img)
-                shutil.move(img_src_path, img_dst_path)
-
-                # Aynı isme sahip label dosyasını taşı
-                lbl_name = img.replace('.jpg', '.txt')  # Görsel uzantısına göre label uzantısını ayarla
-                lbl_src_path = os.path.join(temp, 'labels', lbl_name)
-                lbl_dst_path = os.path.join(output_dataset, folder, 'labels', lbl_name)
-                shutil.move(lbl_src_path, lbl_dst_path)
-        
-
-        
-        """
         # YOLO v11 data.yaml dosyasını oluştur
         yaml_content = (
             f"train: ../train/images\n"
@@ -163,16 +125,15 @@ def create_dataset(selected_folders_list, category_names, train_ratio, val_ratio
             f"test: ../test/images\n"
             f"nc: {len(category_names)}\n"
             f"names: {str(category_names)}"
-            
         )
-        
+
         # data.yaml dosyasını kaydet
         yaml_path = os.path.join(output_dataset, "data.yaml")
         with open(yaml_path, 'w') as f:
             f.write(yaml_content)
-        print(total_files_in_folder,train_ratio,test_ratio)
+
         return True
-        
+
     except Exception as e:
         print(f"Hata oluştu: {str(e)}")
         return False 
