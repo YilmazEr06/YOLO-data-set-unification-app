@@ -2,7 +2,7 @@ import os
 import shutil
 import yaml
 from PyQt5.QtGui import QImage, QPixmap
-import cv2
+
 import numpy as np
 
 
@@ -11,20 +11,26 @@ class reader():
     def __init__(self):
         self.current_image = None
         self.current_pixmap = None
-        
-    def read_yaml(self,dataset_name,c):
+
+    def read_yaml(self,dataset_name):
         try:
             with open(f"datasets\\{dataset_name}\\data.yaml", "r") as file:
                 data = yaml.safe_load(file)
-            relative_paths= [data["names"],data["train"],data["test"],data["roboflow"]["project"]]
+            relative_paths= [data["names"],data["train"],data["test"]]
+            
+ 
+            return relative_paths
+        except FileNotFoundError:
+            print("Dosya bulunamadı.")
+        except yaml.YAMLError as exc:
+            print("Error while parsing YAML:", exc)
 
-            if c:
-                print("Proje adı:" + data["roboflow"]["project"])
-                print("Katagori isimleri:")
-                i=1
-                for cat in data["names"]:
-                    print("  "+str(i)+"- " + cat)
-                    i=i+1
+    def read_yaml1(self,dataset_name):
+        try:
+            with open(f"{dataset_name}\\data.yaml", "r") as file:
+                data = yaml.safe_load(file)
+            relative_paths= [data["names"],data["train"],data["test"]]
+            
  
             return relative_paths
         except FileNotFoundError:
@@ -47,12 +53,12 @@ class reader():
         return file_names
     
     def count_yolo11_datasets(self,dataset_name):
-        catagories= self.read_yaml(dataset_name,False)[0]
+        catagories= self.read_yaml1(dataset_name)[0]
         count_list =  [0] * len(catagories)
         folders=["test","train","valid"]
         for folder in folders:
-            for label_file in os.listdir(f"datasets\\{dataset_name}\\{folder}\\labels"):
-                with open(f"datasets\\{dataset_name}\\{folder}\\labels\\{label_file}", "r") as file:
+            for label_file in os.listdir(f"{dataset_name}\\{folder}\\labels"):
+                with open(f"{dataset_name}\\{folder}\\labels\\{label_file}", "r") as file:
                     for line in file:
                         first_word = line.split()[0] if line.strip() else None
                         if first_word:
@@ -63,13 +69,13 @@ class reader():
     
  
 
-    def categorize_yolo11_datasets(self, dataset_name,):
-        catagories= self.read_yaml(dataset_name,False)[0]
+    def categorize_yolo11_datasets(self, dataset_name):
+        catagories = self.read_yaml(dataset_name)[0]
         count_list =  [0] * len(catagories)
         # Create output directories
         os.makedirs("output", exist_ok=True)
         
-        categories = self.read_yaml(dataset_name, False)[0]
+        categories = self.read_yaml(dataset_name)[0]
 
         for category in categories:
             category_path = os.path.join("output", category)
@@ -148,106 +154,5 @@ class reader():
             print(f"Hata: {str(e)}")
         
 
-    """
-    def catagorize_yolo11_datasets(self,dataset_name,output_path):
-        # Çıkış klasörlerini oluştur
-        print("a")
-        os.makedirs(output_path, exist_ok=True)
-        catagories= self.read_yaml(dataset_name,False)[0]
-
-        for cat_ in catagories:
-            os.makedirs(os.path.join(output_path,cat_),exist_ok=True)
-            os.makedirs(os.path.join(f"{output_path}/{cat_}","images"),exist_ok=True)
-            os.makedirs(os.path.join(f"{output_path}/{cat_}","labels"),exist_ok=True)
-            
-        
-       
-
-    
-        image_count=0
-        
-        images_path = os.path.join(dataset_name, "images")
-        labels_path = os.path.join(dataset_name, "labels")
-        print(images_path)
-
-        folders=["test","train","valid"]
-        for folder in folders:
-            images_path = os.path.join("datasets", f"{dataset_name}\{folder}\images")
-            labels_path = os.path.join("datasets", f"{dataset_name}\{folder}\labels")
-            for label_file in os.listdir(f"datasets\{dataset_name}\{folder}\labels"):
-                label_path = os.path.join(labels_path, label_file)
-                image_file = label_file.replace(".txt", ".jpg")
-                image_path = os.path.join(images_path, image_file)
-                
-
-                with open(f"datasets\\{dataset_name}\\{folder}\\labels\\{label_file}", "r") as file:
-                            
-                    
-                    for line in file:
-                        print(line)
-
-                        first_word = line.split()[0] if line.strip() else None
-                        if first_word:
-                            print("ab")
-                            new_image_file = f"image_{image_count}.jpg"
-                            new_label_file = f"image_{image_count}.txt"
-                            print(image_count)
-                            # Görüntü ve etiket dosyalarını kopyala
-                            shutil.copy(image_path, os.path.join(f"output\{catagories[int(first_word)]}\images", new_image_file))
-
-                            shutil.copy(label_path, os.path.join(f"output\{catagories[int(first_word)]}\labels", new_label_file))
-                            
-                            with open(os.path.join(f"output\{catagories(int(first_word))}\labels", new_label_file), "w") as f:
-                                f.writelines(filtered_lines)
-                           
-                           
-
-                            # Görüntü ve etiket dosyalarını kopyala 
-                           
-                           
-                            image_count += 1
-                            print(catagories[int(first_word)])
-        print(images_path)
-        print(labels_path)
-
-
-        
-       
-        for label_file in os.listdir(labels_path):
-            label_path = os.path.join(labels_path, label_file)
-            image_file = label_file.replace(".txt", ".jpg")
-            image_path = os.path.join(images_path, image_file)
-
-            if not os.path.exists(image_path):
-                continue  # Etiketin görüntüsü yoksa atla
-
-            
-            with open(label_path, "r") as f:
-                
-                image_count = 0
-
-                lines = f.readlines()
-
-                filtered_lines = [line for line in lines if line.startswith("0")]
-
-                print(filtered_lines)
-
-                if filtered_lines:
-                    # Yeni görüntü ve etiket dosyalarının yollarını belirle
-                    new_image_file = f"image_{image_count}.jpg"
-                    new_label_file = f"image_{image_count}.txt"
-
-                    # Görüntü ve etiket dosyalarını kopyala
-                    shutil.copy(image_path, os.path.join(images_output, new_image_file))
-
-                    with open(os.path.join(labels_output, new_label_file), "w") as f:
-                        f.writelines(filtered_lines)
-
-                    image_count += 1
-
-        print(f"Birleştirme tamamlandı. {image_count} resim kaydedildi.")
-
-    
-"""
 
   
