@@ -2,3 +2,6 @@ datasets/
 output/
 output_dataset/
 *.zip
+*.exe
+*.spec
+interface.exe
